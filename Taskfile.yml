@@ -36,3 +36,9 @@ tasks:
         sh -c '{{.PY_ENV}} && python3 --version; python3 -m pip list 2>/dev/null | grep -iE "^(milc|hjson|jsonschema|argcomplete|qmk) ";
         echo "=== STDOUT BEGIN"; bin/qmk generate-version-h --skip-git -q -o /tmp/version.h 2>/tmp/err; echo "=== STDOUT END rc=$?";
         echo "=== STDERR"; cat /tmp/err'
+
+  flash:
+    desc: Flash massdrop_alt_openrgb.bin with mdloader (pkexec; press Fn+B once it is scanning)
+    cmds:
+      - echo "Hold Fn+B for half a second once mdloader starts scanning."
+      - pkexec {{.TASKFILE_DIR}}/mdloader --first --download {{.TASKFILE_DIR}}/massdrop_alt_openrgb.bin --restart
