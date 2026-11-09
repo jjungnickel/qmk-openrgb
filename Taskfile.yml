@@ -1,0 +1,38 @@
+# ABOUTME: Builds the Massdrop ALT (v1) OpenRGB keymap inside the stock QMK container.
+# ABOUTME: Local helper only; not part of the upstream fork.
+version: "3"
+
+vars:
+  IMAGE: qmkfm/qmk_cli:latest
+  # The 2021 bin/qmk needs requirements.txt, which the image's own qmk CLI env lacks.
+  PY_ENV: >-
+    if command -v uv >/dev/null; then uv venv -q /tmp/venv && VIRTUAL_ENV=/tmp/venv uv pip install -q -r requirements.txt;
+    else python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -q -r requirements.txt; fi && export PATH=/tmp/venv/bin:$PATH
+  DOCKER_RUN: >-
+    docker run --rm
+    --user "${SUDO_UID:-$(id -u)}:${SUDO_GID:-$(id -g)}"
+    -e HOME=/tmp
+    -e SKIP_GIT=yes
+    -e QMK_HOME=/qmk_firmware
+    -v "{{.TASKFILE_DIR}}:/qmk_firmware"
+    -w /qmk_firmware
+    --entrypoint ""
+    {{.IMAGE}}
+
+tasks:
+  build:
+    desc: Build massdrop/alt:openrgb (output .bin lands in the repo root)
+    cmds:
+      - >-
+        {{.DOCKER_RUN}}
+        sh -c '{{.PY_ENV}} && git config --global --add safe.directory "*" && make massdrop/alt:openrgb QMK_BIN=bin/qmk ALLOW_WARNINGS=yes'
+      - ls -la {{.TASKFILE_DIR}}/*.bin
+
+  diagnose:
+    desc: Show what the version.h generator prints to stdout inside the container
+    cmds:
+      - >-
+        {{.DOCKER_RUN}}
+        sh -c '{{.PY_ENV}} && python3 --version; python3 -m pip list 2>/dev/null | grep -iE "^(milc|hjson|jsonschema|argcomplete|qmk) ";
+        echo "=== STDOUT BEGIN"; bin/qmk generate-version-h --skip-git -q -o /tmp/version.h 2>/tmp/err; echo "=== STDOUT END rc=$?";
+        echo "=== STDERR"; cat /tmp/err'
